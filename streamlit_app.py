@@ -151,7 +151,6 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
 
 def main():
     logo_path = Path("assets/5lakes_logo.jpg")
-    logo_url = str(logo_path) if logo_path.exists() else ""
     st.markdown(f"""
     <div style="display:flex; align-items:center; gap:20pxx; margin-bottom:1rem;">
         <img src="{logo_url}" alt="5 Lakes Energy Logo" style="width:220px; border-radius:5px;">
