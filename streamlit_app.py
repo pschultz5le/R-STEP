@@ -61,7 +61,7 @@ def render_field(row, key_prefix: str, current_value):
         # use float everywhere to avoid StreamlitMixedNumericTypesError
         if t == "percentage":
             step = 0.01
-        else
+        else:
             step = 1
         val = _to_float(current_value)
         if val is None:
