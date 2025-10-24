@@ -13,6 +13,52 @@ HEADERS  = {"Content-Type": "application/json", **({"X-API-Key": API_KEY} if API
 
 st.set_page_config(page_title="R-STEP Calculator", layout="wide")
 
+# Custom 5 Lakes Energy styling
+def apply_custom_style():
+    st.markdown("""
+    <style>
+    /* Global font and colors */
+    html, body, [class*="css"]  {
+        font-family: 'Segoe UI', sans-serif;
+        color: #003366; /* deep blue text */
+    }
+
+    /* Headers */
+    h1, h2, h3 {
+        color: #0073C2; /* blue from logo */
+        font-weight: 700;
+    }
+
+    /* Buttons */
+    div.stButton > button:first-child {
+        background-color: #3CB043; /* green leaf color */
+        color: white;
+        border-radius: 8px;
+        padding: 0.5em 1.5em;
+        font-weight: 600;
+        border: none;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #2C8A35;
+    }
+
+    /* Tables */
+    .stDataFrame table {
+        border: 1px solid #0073C2;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #F2FAF2; /* very light green tint */
+    }
+
+    /* Divider line */
+    hr {
+        border: 1px solid #0073C2;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 @st.cache_data(show_spinner=False)
 def load_schema() -> Dict[str, Any]:
     r = requests.get(f"{API_BASE}/schema", timeout=30)
