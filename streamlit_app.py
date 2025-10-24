@@ -184,17 +184,14 @@ def main():
     label_map = build_label_map(schema)
 
     with st.sidebar:
-        if st.button("↻ Refresh schema"):
-            load_schema.clear()   # clears the @st.cache_data
-            st.experimental_rerun()
+        st.subheader("Calculators")
+        all_ids = [c["id"] for c in calculators]
+        selected = st.multiselect("Select calculators", options=all_ids, default=all_ids)
         st.subheader("Connection")
         st.write(f"API: `{API_BASE}`")
         st.caption("Auth: X-API-Key enabled" if API_KEY else "No API key set (public).")
         st.divider()
-        st.subheader("Calculators")
-        all_ids = [c["id"] for c in calculators]
-        selected = st.multiselect("Select calculators", options=all_ids, default=all_ids)
-
+      
     left, right = st.columns([6, 6])  # tweak ratios to taste
 
     with left:
