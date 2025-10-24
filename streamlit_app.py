@@ -48,7 +48,7 @@ def render_field(row, key_prefix: str, current_value):
     name_key = row["Name"]                               # <- key uses schema Name
     label_text = (row.get("Description") or name_key).strip()  # <- label uses Description
     label = f"{label_text}{' *' if row.get('Required') else ''}"
-    helptext = row.get("HelpText") or None
+    helptext = row.get("HelpText")
     ev = row.get("EnumValues")
 
     # enums -> selectbox
