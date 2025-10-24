@@ -86,7 +86,7 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
     return mapping
 
 def main():
-    st.title("R-STEP Calculator (Streamlit)")
+    st.title("R-STEP Calculator")
 
     # Load schema (cached)
     try:
