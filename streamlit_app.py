@@ -2,6 +2,7 @@ import os
 import json
 from typing import Dict, Any, List
 import requests
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 
@@ -12,6 +13,7 @@ HEADERS  = {"Content-Type": "application/json", **({"X-API-Key": API_KEY} if API
 # --------------------------------------------
 
 st.set_page_config(page_title="R-STEP Calculator", layout="wide")
+apply_custom_style()
 
 # Custom 5 Lakes Energy styling
 def apply_custom_style():
@@ -175,6 +177,9 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
     return mapping
 
 def main():
+    logo_path = Path("assets/5lakes_logo.jpg")
+    if logo_path.exists():
+        st.image(str(logo_path), width=300)
     st.title("R-STEP Calculator")
 
     # Load schema (cached)
