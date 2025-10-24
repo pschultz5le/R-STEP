@@ -75,7 +75,7 @@ def render_field(row, key_prefix: str, current_value):
     name_key = row["Name"]
     label_text = (row.get("Description") or name_key).strip()
     label = f"{label_text}{' *' if row.get('Required') else ''}"
-    helptext = row.get("HelpText")
+    helptext = row.get("Help")
     ev = row.get("EnumValues")
 
     if isinstance(ev, list) and len(ev) > 0:
@@ -147,6 +147,9 @@ def main():
     label_map = build_label_map(schema)
 
     with st.sidebar:
+        if st.button("↻ Refresh schema"):
+            load_schema.clear()   # clears the @st.cache_data
+            st.experimental_rerun()
         st.subheader("Connection")
         st.write(f"API: `{API_BASE}`")
         st.caption("Auth: X-API-Key enabled" if API_KEY else "No API key set (public).")
