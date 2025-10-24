@@ -33,58 +33,74 @@ def _to_float(x):
     except Exception:
         return None
 
+def _stringify_options(ev):
+    out = []
+    for o in (ev or []):
+        out.append(str(o))
+    return out
+
 def render_field(row, key_prefix: str, current_value):
-    """Auto-widget from schema row; returns new value or None."""
+    """
+    Show Description as the label, but use Name for the widget key.
+    This keeps the UI friendly and makes overrides/globals resolve correctly.
+    """
     t = (row.get("Type") or "string").lower()
-    name = row.get("Description")
-    label = f"{name}{' *' if row.get('Required') else ''}"
+    name_key = row["Name"]                               # <- key uses schema Name
+    label_text = (row.get("Description") or name_key).strip()  # <- label uses Description
+    label = f"{label_text}{' *' if row.get('Required') else ''}"
     helptext = row.get("HelpText") or None
     ev = row.get("EnumValues")
 
-    # enums -> dropdown
+    # enums -> selectbox
     if isinstance(ev, list) and len(ev) > 0:
-        options = ev
-        # try to preserve current selection if present
-        idx = 0
-        if current_value in options:
-            idx = options.index(current_value)
+        options = _stringify_options(ev)
+        cur = "" if current_value is None else str(current_value)
+        try:
+            idx = options.index(cur)
+        except ValueError:
+            idx = 0
         return st.selectbox(
             label,
             options=options,
             index=idx if 0 <= idx < len(options) else 0,
-            key=f"{key_prefix}:{name}",
+            key=f"{key_prefix}:{name_key}",              # <-- key = "global:Name" or "calc:<id>:Name"
             help=helptext,
         )
 
-    # numbers / percentages -> number_input (all float types)
+    # numbers / percentages -> number_input (float-safe)
+    def _to_float(x):
+        if x is None or x == "":
+            return None
+        try:
+            return float(x)
+        except Exception:
+            return None
+
     if t in ("number", "percentage"):
-        # use float everywhere to avoid StreamlitMixedNumericTypesError
-        if t == "percentage":
-            step = 0.01
-        else:
-            step = 1
-        val = _to_float(current_value)        
+        step = 0.01 if t == "percentage" else 1.0
+        val = _to_float(current_value)
         if val is None:
-            # optional: try Default, else 0.0
-            val = _to_float(row.get("Default"))
-            if val is None:
-                val = 0.0
+            val = _to_float(row.get("Default")) or 0.0
         minv = _to_float(row.get("Min"))
         maxv = _to_float(row.get("Max"))
-
         return st.number_input(
             label,
             value=float(val),
             step=float(step),
-            min_value=minv,   # ok if None
-            max_value=maxv,   # ok if None
-            key=f"{key_prefix}:{name}",
+            min_value=minv,
+            max_value=maxv,
+            key=f"{key_prefix}:{name_key}",              # <-- key uses Name
             help=helptext,
         )
 
     # strings
     val = "" if current_value is None else str(current_value)
-    return st.text_input(label, value=val, key=f"{key_prefix}:{name}", help=helptext)
+    return st.text_input(
+        label,
+        value=val,
+        key=f"{key_prefix}:{name_key}",                  # <-- key uses Name
+        help=helptext,
+    )
 
 def format_number(x):
     """Format numbers with thousands separators; leave others as-is."""
