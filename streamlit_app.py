@@ -5,6 +5,7 @@ import requests
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+import base64
 
 # ------------------ CONFIG ------------------
 API_BASE = st.secrets.get("API_BASE", os.environ.get("API_BASE", "http://127.0.0.1:8000"))
@@ -51,6 +52,14 @@ st.set_page_config(page_title="R-STEP Calculator", layout="wide")
 apply_custom_style()  # <-- now safe
 
 @st.cache_data(show_spinner=False)
+def logo_img_tag(width=220) -> str:
+    logo_path = Path(__file__).parent / "assets" / "5lakes_logo.jpg"
+    if logo_path.exists():
+        b64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
+        return f"<img src='data:image/jpeg;base64,{b64}' alt='5 Lakes Energy Logo' style='width:{width}px; border-radius:5px;'>"
+    # fallback placeholder
+    return f"<div style='width:{width}px;height:{int(width*0.45)}px;background:#eee;color:#666;display:flex;align-items:center;justify-content:center;border-radius:5px;'>Logo</div>"
+    
 def load_schema() -> Dict[str, Any]:
     r = requests.get(f"{API_BASE}/schema", timeout=30)
     r.raise_for_status()
@@ -150,16 +159,13 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
     return mapping
 
 def main():
-    logo_path = Path("assets/5lakes_logo.jpg")
-    logo_url = str(logo_path) if logo_path.exists() else ""
-
     st.markdown(
         f"""
         <div style='display:flex; align-items:center; gap:20px; margin-bottom:1rem;'>
-            <img src='{logo_url}' alt='5 Lakes Energy Logo' style='width:220px; border-radius:5px;'>
+            {logo_img_tag(220)}
             <div>
                 <h1 style='margin:0; color:#0073C2;'>R-STEP Calculator</h1>
-                <p style='margin:0; color:#3CB043; font-weight:500;'>Reliable Energy Siting through Technical Engagement and Planning </p>
+                <p style='margin:0; color:#3CB043; font-weight:500;'>Renewable Siting Tool for Energy Planning</p>
             </div>
         </div>
         """,
