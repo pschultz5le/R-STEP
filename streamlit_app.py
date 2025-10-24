@@ -38,7 +38,7 @@ def render_field(row, key_prefix: str, current_value):
     t = (row.get("Type") or "string").lower()
     name = row.get("Description")
     label = f"{name}{' *' if row.get('Required') else ''}"
-    helptext = row.get("Description") or None
+    helptext = row.get("HelpText") or None
     ev = row.get("EnumValues")
 
     # enums -> dropdown
