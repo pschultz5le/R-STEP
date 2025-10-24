@@ -187,9 +187,10 @@ def main():
         st.subheader("Module")
         all_ids = [c["id"] for c in calculators]
         selected = st.multiselect("Select module(s)", options=all_ids, default=all_ids)
+        st.divider()
         st.subheader("Instructions")
-        st.write("Select which modules you'd like to use in the dropdown above. Once selected, enter in the applicable global inputs and module-specific inputs.")
-        st.write("If you are unsure on what an input is, toggle the question mark icon to the right of the input. Once all inputs are entered, click the 'Calculate' button.")
+        st.write("Select which modules you'd like to use in the dropdown above.")
+        st.write("Once selected, enter in the applicable global inputs and module-specific inputs. If you are unsure on what an input is, toggle the question mark icon to the right of the input. Once all inputs are entered, click the 'Calculate' button.")
         st.write("Results will be displayed on the right hand side of the screen. If you receive an error, please wait a few seconds and click the 'Calculate' button again")
         st.divider()
         st.subheader("Connection")
