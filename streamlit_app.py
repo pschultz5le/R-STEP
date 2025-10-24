@@ -60,12 +60,10 @@ def render_field(row, key_prefix: str, current_value):
     if t in ("number", "percentage"):
         # use float everywhere to avoid StreamlitMixedNumericTypesError
         if t == "percentage":
-            step = 0.1,
-            val = _to_float(current_value),
-            val.map(format_number)
+            step = 0.1
         else:
-            step = 1,
-            val = _to_float(current_value)        
+            step = 1
+        val = _to_float(current_value)        
         if val is None:
             # optional: try Default, else 0.0
             val = _to_float(row.get("Default"))
