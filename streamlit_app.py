@@ -186,9 +186,12 @@ def main():
     with st.sidebar:
         st.subheader("Module")
         all_ids = [c["id"] for c in calculators]
-        selected = st.multiselect("Select calculators", options=all_ids, default=all_ids)
+        selected = st.multiselect("Select module(s)", options=all_ids, default=all_ids)
         st.subheader("Instructions")
-        st.write("Select which modules you'd like to use in the dropdown above. Once selected, enter in the applicable global inputs and module-specific inputs. If you are unsure on what an input is, toggle the question mark icon to the right of the input. Once all inputs are entered, click the 'Calculate' button. Results will be displayed on the right hand side of the screen.")
+        st.write("Select which modules you'd like to use in the dropdown above. Once selected, enter in the applicable global inputs and module-specific inputs.")
+        st.write("If you are unsure on what an input is, toggle the question mark icon to the right of the input. Once all inputs are entered, click the 'Calculate' button.")
+        st.write("Results will be displayed on the right hand side of the screen. If you receive an error, please wait a few seconds and click the 'Calculate' button again")
+        st.divider()
         st.subheader("Connection")
         st.write(f"API: `{API_BASE}`")
         st.caption("Auth: X-API-Key enabled" if API_KEY else "No API key set (public).")
