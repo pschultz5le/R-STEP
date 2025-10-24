@@ -12,28 +12,20 @@ API_KEY  = st.secrets.get("API_KEY",  os.environ.get("API_KEY",  ""))  # optiona
 HEADERS  = {"Content-Type": "application/json", **({"X-API-Key": API_KEY} if API_KEY else {})}
 # --------------------------------------------
 
-st.set_page_config(page_title="R-STEP Calculator", layout="wide")
-apply_custom_style()
-
-# Custom 5 Lakes Energy styling
+# --- define this first ---
 def apply_custom_style():
     st.markdown("""
     <style>
-    /* Global font and colors */
     html, body, [class*="css"]  {
         font-family: 'Segoe UI', sans-serif;
-        color: #003366; /* deep blue text */
+        color: #003366;
     }
-
-    /* Headers */
     h1, h2, h3 {
-        color: #0073C2; /* blue from logo */
+        color: #0073C2;
         font-weight: 700;
     }
-
-    /* Buttons */
     div.stButton > button:first-child {
-        background-color: #3CB043; /* green leaf color */
+        background-color: #3CB043;
         color: white;
         border-radius: 8px;
         padding: 0.5em 1.5em;
@@ -43,23 +35,14 @@ def apply_custom_style():
     div.stButton > button:first-child:hover {
         background-color: #2C8A35;
     }
-
-    /* Tables */
-    .stDataFrame table {
-        border: 1px solid #0073C2;
-    }
-
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #F2FAF2; /* very light green tint */
-    }
-
-    /* Divider line */
-    hr {
-        border: 1px solid #0073C2;
-    }
+    .stDataFrame table { border: 1px solid #0073C2; }
+    section[data-testid="stSidebar"] { background-color: #F2FAF2; }
+    hr { border: 1px solid #0073C2; }
     </style>
     """, unsafe_allow_html=True)
+
+st.set_page_config(page_title="R-STEP Calculator", layout="wide")
+apply_custom_style()  # <-- now safe
 
 @st.cache_data(show_spinner=False)
 def load_schema() -> Dict[str, Any]:
@@ -82,24 +65,19 @@ def _to_float(x):
         return None
 
 def _stringify_options(ev):
-    out = []
-    for o in (ev or []):
-        out.append(str(o))
-    return out
+    return [str(o) for o in (ev or [])]
 
 def render_field(row, key_prefix: str, current_value):
     """
     Show Description as the label, but use Name for the widget key.
-    This keeps the UI friendly and makes overrides/globals resolve correctly.
     """
     t = (row.get("Type") or "string").lower()
-    name_key = row["Name"]                               # <- key uses schema Name
-    label_text = (row.get("Description") or name_key).strip()  # <- label uses Description
+    name_key = row["Name"]
+    label_text = (row.get("Description") or name_key).strip()
     label = f"{label_text}{' *' if row.get('Required') else ''}"
     helptext = row.get("HelpText")
     ev = row.get("EnumValues")
 
-    # enums -> selectbox
     if isinstance(ev, list) and len(ev) > 0:
         options = _stringify_options(ev)
         cur = "" if current_value is None else str(current_value)
@@ -108,21 +86,9 @@ def render_field(row, key_prefix: str, current_value):
         except ValueError:
             idx = 0
         return st.selectbox(
-            label,
-            options=options,
-            index=idx if 0 <= idx < len(options) else 0,
-            key=f"{key_prefix}:{name_key}",              # <-- key = "global:Name" or "calc:<id>:Name"
-            help=helptext,
+            label, options=options, index=idx if 0 <= idx < len(options) else 0,
+            key=f"{key_prefix}:{name_key}", help=helptext,
         )
-
-    # numbers / percentages -> number_input (float-safe)
-    def _to_float(x):
-        if x is None or x == "":
-            return None
-        try:
-            return float(x)
-        except Exception:
-            return None
 
     if t in ("number", "percentage"):
         step = 0.01 if t == "percentage" else 1.0
@@ -132,38 +98,25 @@ def render_field(row, key_prefix: str, current_value):
         minv = _to_float(row.get("Min"))
         maxv = _to_float(row.get("Max"))
         return st.number_input(
-            label,
-            value=float(val),
-            step=float(step),
-            min_value=minv,
-            max_value=maxv,
-            key=f"{key_prefix}:{name_key}",              # <-- key uses Name
-            help=helptext,
+            label, value=float(val), step=float(step),
+            min_value=minv, max_value=maxv,
+            key=f"{key_prefix}:{name_key}", help=helptext,
         )
 
-    # strings
     val = "" if current_value is None else str(current_value)
-    return st.text_input(
-        label,
-        value=val,
-        key=f"{key_prefix}:{name_key}",                  # <-- key uses Name
-        help=helptext,
-    )
+    return st.text_input(label, value=val, key=f"{key_prefix}:{name_key}", help=helptext)
 
 def format_number(x):
-    """Format numbers with thousands separators; leave others as-is."""
     if x is None or x == "":
         return ""
     if isinstance(x, (int, float)):
         return f"{x:,.0f}"
     try:
-        num = float(x)
-        return f"{num:,.0f}"
+        return f"{float(x):,.0f}"
     except Exception:
         return x
 
 def build_label_map(schema) -> Dict[str, Dict[str, str]]:
-    """Map calcId -> { outputName -> Label (fallback to Name) }"""
     mapping: Dict[str, Dict[str, str]] = {}
     for c in schema.get("calculators", []):
         by_name = {}
@@ -182,7 +135,6 @@ def main():
         st.image(str(logo_path), width=300)
     st.title("R-STEP Calculator")
 
-    # Load schema (cached)
     try:
         schema = load_schema()
     except Exception as e:
@@ -197,16 +149,12 @@ def main():
     with st.sidebar:
         st.subheader("Connection")
         st.write(f"API: `{API_BASE}`")
-        if API_KEY:
-            st.write("Auth: using X-API-Key")
-        else:
-            st.caption("No API key set (public).")
+        st.caption("Auth: X-API-Key enabled" if API_KEY else "No API key set (public).")
         st.divider()
         st.subheader("Calculators")
         all_ids = [c["id"] for c in calculators]
         selected = st.multiselect("Select calculators", options=all_ids, default=all_ids)
 
-    # Globals
     st.header("Global Inputs")
     cols = st.columns(2)
     globals_vals: Dict[str, Any] = {}
@@ -214,7 +162,6 @@ def main():
         with cols[i % 2]:
             globals_vals[row["Name"]] = render_field(row, key_prefix="global", current_value=None)
 
-    # Per-calculator inputs (hiding duplicates of globals)
     for c in calculators:
         if c["id"] not in selected:
             continue
@@ -228,10 +175,7 @@ def main():
             with cols[i % 2]:
                 val = st.session_state.get(f"calc:{c['id']}:{row['Name']}")
                 _ = render_field(row, key_prefix=f"calc:{c['id']}", current_value=val)
-                # Do NOT write to st.session_state here — the widget manages its own state.
 
-
-    # Build payload
     overrides: Dict[str, Dict[str, Any]] = {}
     for c in calculators:
         if c["id"] not in selected:
@@ -240,7 +184,7 @@ def main():
         for row in (c.get("inputs") or []):
             nm = row["Name"]
             if nm in global_names:
-                continue  # globals will drive these
+                continue
             key = f"calc:{c['id']}:{nm}"
             if key in st.session_state:
                 per[nm] = st.session_state[key]
@@ -260,7 +204,6 @@ def main():
             try:
                 r = requests.post(f"{API_BASE}/calculate", headers=HEADERS,
                                   data=json.dumps(payload), timeout=120)
-                # Show raw response if not OK
                 if not r.ok:
                     st.error(f"API error {r.status_code}: {r.text}")
                 else:
@@ -268,48 +211,36 @@ def main():
                     st.session_state["last_results"] = data.get("results", data)
             except Exception as e:
                 st.error(f"Request failed: {e}")
-
     with c2:
         with st.expander("Payload Preview", expanded=False):
             st.code(json.dumps(payload, indent=2))
 
     st.divider()
-
-    # Results
     results = st.session_state.get("last_results")
     st.header("Results")
     if not results:
         st.caption("No results yet.")
         return
 
-    # Render per calculator
     for cid, block in results.items():
         st.subheader(f"{cid}")
-        scalars = []
-        arrays = []
-
+        scalars, arrays = [], []
         for name, val in (block or {}).items():
-            # scalar if not a dict-with-columns
             if val is None or not isinstance(val, dict) or "columns" not in val or "rows" not in val:
                 label = label_map.get(cid, {}).get(name, name)
                 scalars.append({"Metric": label, "Value": val})
             else:
                 arrays.append((name, val))
 
-        # scalar table
         if scalars:
             df = pd.DataFrame(scalars)
-            # Format numbers with commas (no decimals); align right on Value
             df["Value"] = df["Value"].map(format_number)
             st.dataframe(df, use_container_width=True)
 
-        # array tables
         for name, v in arrays:
             header = label_map.get(cid, {}).get(name, v.get("label") or name)
             st.caption(header)
-            cols = v["columns"]
-            rows = v["rows"]
-            df = pd.DataFrame(rows, columns=cols)
+            df = pd.DataFrame(v["rows"], columns=v["columns"])
             df = df.applymap(format_number)
             st.dataframe(df, use_container_width=True)
 
