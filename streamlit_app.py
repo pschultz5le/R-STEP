@@ -214,7 +214,7 @@ def main():
 
     # Render per calculator
     for cid, block in results.items():
-        st.subheader(f"Results · {cid}")
+        st.subheader(f"{cid}")
         scalars = []
         arrays = []
 
