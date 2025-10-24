@@ -59,7 +59,7 @@ def render_field(row, key_prefix: str, current_value):
     # numbers / percentages -> number_input (all float types)
     if t in ("number", "percentage"):
         # use float everywhere to avoid StreamlitMixedNumericTypesError
-        if t ="percentage":
+        if t == "percentage":
             step = 0.01
         else
             step = 1
