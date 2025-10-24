@@ -36,7 +36,7 @@ def _to_float(x):
 def render_field(row, key_prefix: str, current_value):
     """Auto-widget from schema row; returns new value or None."""
     t = (row.get("Type") or "string").lower()
-    name = row["Name"]
+    name = row.get("Description")
     label = f"{name}{' *' if row.get('Required') else ''}"
     helptext = row.get("Description") or None
     ev = row.get("EnumValues")
