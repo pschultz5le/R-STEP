@@ -25,6 +25,14 @@ def number_step(row_type: str):
         return 0.01
     return None
 
+def _to_float(x):
+    if x is None or x == "":
+        return None
+    try:
+        return float(x)
+    except Exception:
+        return None
+
 def render_field(row, key_prefix: str, current_value):
     """Auto-widget from schema row; returns new value or None."""
     t = (row.get("Type") or "string").lower()
@@ -35,26 +43,42 @@ def render_field(row, key_prefix: str, current_value):
 
     # enums -> dropdown
     if isinstance(ev, list) and len(ev) > 0:
-        # convert to str labels but keep original values
         options = ev
+        # try to preserve current selection if present
         idx = 0
         if current_value in options:
             idx = options.index(current_value)
-        elif current_value is None and "" in options:
-            idx = options.index("")
-        return st.selectbox(label, options=options, index=idx if idx is not None else 0,
-                            key=f"{key_prefix}:{name}", help=helptext)
+        return st.selectbox(
+            label,
+            options=options,
+            index=idx if 0 <= idx < len(options) else 0,
+            key=f"{key_prefix}:{name}",
+            help=helptext,
+        )
 
-    # numbers / percentages
+    # numbers / percentages -> number_input (all float types)
     if t in ("number", "percentage"):
-        step = number_step(t)
-        minv = row.get("Min")
-        maxv = row.get("Max")
-        val = 0.0 if current_value is None else float(current_value)
-        return st.number_input(label, value=val, step=step or 0.01,
-                               min_value=minv if minv is not None else None,
-                               max_value=maxv if maxv is not None else None,
-                               key=f"{key_prefix}:{name}", help=helptext)
+        # use float everywhere to avoid StreamlitMixedNumericTypesError
+        step = 0.01
+        val = _to_float(current_value)
+        if val is None:
+            # optional: try Default, else 0.0
+            val = _to_float(row.get("Default"))
+            if val is None:
+                val = 0.0
+        minv = _to_float(row.get("Min"))
+        maxv = _to_float(row.get("Max"))
+
+        return st.number_input(
+            label,
+            value=float(val),
+            step=float(step),
+            min_value=minv,   # ok if None
+            max_value=maxv,   # ok if None
+            key=f"{key_prefix}:{name}",
+            help=helptext,
+        )
+
     # strings
     val = "" if current_value is None else str(current_value)
     return st.text_input(label, value=val, key=f"{key_prefix}:{name}", help=helptext)
