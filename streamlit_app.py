@@ -165,7 +165,7 @@ def main():
             {logo_img_tag(220)}
             <div>
                 <h1 style='margin:0; color:#0073C2;'>R-STEP Calculator</h1>
-                <p style='margin:0; color:#3CB043; font-weight:500;'>Renewable Siting Tool for Energy Planning</p>
+                <p style='margin:0; color:#3CB043; font-weight:500;'>Reliable Energy Siting through Technical Engagement and Planning </p>
             </div>
         </div>
         """,
