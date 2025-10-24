@@ -160,9 +160,9 @@ def main():
         for i, row in enumerate(rows):
             with cols[i % 2]:
                 val = st.session_state.get(f"calc:{c['id']}:{row['Name']}")
-                new_val = render_field(row, key_prefix=f"calc:{c['id']}", current_value=val)
-                # store in session_state so re-renders keep values
-                st.session_state[f"calc:{c['id']}:{row['Name']}"] = new_val
+                _ = render_field(row, key_prefix=f"calc:{c['id']}", current_value=val)
+                # Do NOT write to st.session_state here — the widget manages its own state.
+
 
     # Build payload
     overrides: Dict[str, Dict[str, Any]] = {}
