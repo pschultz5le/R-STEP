@@ -264,7 +264,7 @@ def main():
                     with st.expander(header, expanded=False):
                         df = pd.DataFrame(v["rows"], columns=v["columns"])
                         df = df.applymap(format_number)
-                        st.dataframe(df, use_container_width=True))
+                        st.dataframe(df, use_container_width=True)
 
 if __name__ == "__main__":
     main()
