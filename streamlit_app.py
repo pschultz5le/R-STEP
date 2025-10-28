@@ -193,6 +193,7 @@ def main():
         st.write("Once selected, enter in the applicable global inputs and module-specific inputs. If you are unsure on what an input is, toggle the question mark icon to the right of the input. Once all inputs are entered, click the 'Calculate' button.")
         st.write("Results will be displayed on the right hand side of the screen. If you receive an error, please wait a few seconds and click the 'Calculate' button again")
         st.divider()
+        st.subheader("Position in Request Queue")
         try:
             s = requests.get(f"{API_BASE}/queue/status", timeout=5).json()
             st.caption(f"Queue: {s.get('queued', 0)} running/waiting")
