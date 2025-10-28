@@ -5,6 +5,7 @@ from pathlib import Path
 import requests
 import pandas as pd
 import streamlit as st
+import base64
 
 # ------------------ CONFIG ------------------
 API_BASE = st.secrets.get("API_BASE", os.environ.get("API_BASE", "http://127.0.0.1:8000"))
