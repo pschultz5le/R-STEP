@@ -288,10 +288,12 @@ def main():
 
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
-                    st.caption(header)
-                    df = pd.DataFrame(v["rows"], columns=v["columns"])
-                    df = df.applymap(format_number)
-                    st.dataframe(df, use_container_width=True)
+                    with st.expander(header, expanded=False):
+                        cols = v["columns"]
+                        rows = v["rows"]
+                        df = pd.DataFrame(rows, columns=cols)
+                        df = df.applymap(format_number)
+                        st.dataframe(df, use_container_width=True)
 
 if __name__ == "__main__":
     main()
