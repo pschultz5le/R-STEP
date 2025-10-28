@@ -60,13 +60,27 @@ def _to_float(x):
 def _stringify_options(ev):
     return [str(o) for o in (ev or [])]
 
+def _get_help(row):
+    raw = (
+        row.get("HelpText")
+        or row.get("Help")
+        or row.get("Help Text")
+        or row.get("Hint")
+        or row.get("Tooltip")
+        or row.get("Notes")
+        or None
+    )
+    if isinstance(raw, str):
+        raw = raw.strip()
+    return raw or None
+
 def render_field(row, key_prefix: str, current_value):
     """Show Description as label, but use Name as key"""
     t = (row.get("Type") or "string").lower()
     name_key = row["Name"]
     label_text = (row.get("Description") or name_key).strip()
     label = f"{label_text}{' *' if row.get('Required') else ''}"
-    helptext = row.get("Help")
+    helptext = _get_help(row)
     ev = row.get("EnumValues")
 
     # dropdown
@@ -156,94 +170,101 @@ def main():
         st.write(f"API: `{API_BASE}`")
         st.caption("Auth: X-API-Key enabled" if API_KEY else "No API key set (public).")
 
-    st.header("Global Inputs")
-    cols = st.columns(2)
-    globals_vals: Dict[str, Any] = {}
-    for i, row in enumerate(globals_rows):
-        with cols[i % 2]:
-            globals_vals[row["Name"]] = render_field(row, key_prefix="global", current_value=None)
+    # --- two-column layout
+    left, right = st.columns([6, 6])  # tweak ratios to taste
 
-    for c in calculators:
-        if c["id"] not in selected:
-            continue
-        st.subheader(f"{c['id']} — Inputs")
-        rows = [r for r in (c.get("inputs") or []) if r["Name"] not in global_names]
-        if not rows:
-            st.caption("No inputs for this calculator.")
-            continue
-        cols = st.columns(2)
-        for i, row in enumerate(rows):
-            with cols[i % 2]:
-                val = st.session_state.get(f"calc:{c['id']}:{row['Name']}")
-                _ = render_field(row, key_prefix=f"calc:{c['id']}", current_value=val)
+    with left:
+        # Globals
+        st.header("Global Inputs")
+        gcols = st.columns(2)
+        globals_vals: Dict[str, Any] = {}
+        for i, row in enumerate(globals_rows):
+            with gcols[i % 2]:
+                globals_vals[row["Name"]] = render_field(row, key_prefix="global", current_value=None)
 
-    overrides: Dict[str, Dict[str, Any]] = {}
-    for c in calculators:
-        if c["id"] not in selected:
-            continue
-        per = {}
-        for row in (c.get("inputs") or []):
-            nm = row["Name"]
-            if nm in global_names:
+        # Per-calculator inputs (hiding duplicates of globals)
+        for c in calculators:
+            if c["id"] not in selected:
                 continue
-            key = f"calc:{c['id']}:{nm}"
-            if key in st.session_state:
-                per[nm] = st.session_state[key]
-        if per:
-            overrides[c["id"]] = per
-
-    payload = {
-        "selected_calculators": selected,
-        "globals": globals_vals,
-        "overrides": overrides
-    }
-
-    st.divider()
-    c1, c2 = st.columns([1,1])
-    with c1:
-        if st.button("Calculate", type="primary"):
-            try:
-                r = requests.post(f"{API_BASE}/calculate", headers=HEADERS,
-                                  data=json.dumps(payload), timeout=120)
-                if not r.ok:
-                    st.error(f"API error {r.status_code}: {r.text}")
-                else:
-                    data = r.json()
-                    st.session_state["last_results"] = data.get("results", data)
-            except Exception as e:
-                st.error(f"Request failed: {e}")
-    with c2:
-        with st.expander("Payload Preview", expanded=False):
-            st.code(json.dumps(payload, indent=2))
-
-    st.divider()
-    st.header("Results")
-    results = st.session_state.get("last_results")
-    if not results:
-        st.caption("No results yet.")
-        return
-
-    for cid, block in results.items():
-        st.subheader(f"{cid}")
-        scalars, arrays = [], []
-        for name, val in (block or {}).items():
-            if val is None or not isinstance(val, dict) or "columns" not in val or "rows" not in val:
-                label = label_map.get(cid, {}).get(name, name)
-                scalars.append({"Metric": label, "Value": val})
+            st.subheader(f"{c['id']} — Inputs")
+            rows = [r for r in (c.get("inputs") or []) if r["Name"] not in global_names]
+            if not rows:
+                st.caption("No inputs for this calculator.")
             else:
-                arrays.append((name, val))
+                icols = st.columns(2)
+                for i, row in enumerate(rows):
+                    with icols[i % 2]:
+                        val = st.session_state.get(f"calc:{c['id']}:{row['Name']}")
+                        _ = render_field(row, key_prefix=f"calc:{c['id']}", current_value=val)
 
-        if scalars:
-            df = pd.DataFrame(scalars)
-            df["Value"] = df["Value"].map(format_number)
-            st.dataframe(df, use_container_width=True)
+        # Build payload on the left
+        overrides: Dict[str, Dict[str, Any]] = {}
+        for c in calculators:
+            if c["id"] not in selected:
+                continue
+            per = {}
+            for row in (c.get("inputs") or []):
+                nm = row["Name"]
+                if nm in global_names:
+                    continue
+                key = f"calc:{c['id']}:{nm}"
+                if key in st.session_state:
+                    per[nm] = st.session_state[key]
+            if per:
+                overrides[c["id"]] = per
 
-        for name, v in arrays:
-            header = label_map.get(cid, {}).get(name, v.get("label") or name)
-            with st.expander(header, expanded=False):
-                df = pd.DataFrame(v["rows"], columns=v["columns"])
-                df = df.applymap(format_number)
-                st.dataframe(df, use_container_width=True)
+        payload = {
+            "selected_calculators": selected,
+            "globals": globals_vals,
+            "overrides": overrides
+        }
+
+        st.divider()
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            if st.button("Calculate", type="primary", use_container_width=True):
+                try:
+                    r = requests.post(f"{API_BASE}/calculate", headers=HEADERS,
+                                      data=json.dumps(payload), timeout=120)
+                    if not r.ok:
+                        st.error(f"API error {r.status_code}: {r.text}")
+                    else:
+                        data = r.json()
+                        st.session_state["last_results"] = data.get("results", data)
+                except Exception as e:
+                    st.error(f"Request failed: {e}")
+        with c2:
+            with st.expander("Payload Preview", expanded=False):
+                st.code(json.dumps(payload, indent=2))
+
+    # --- Results on the right
+    with right:
+        st.header("Results")
+        results = st.session_state.get("last_results")
+        if not results:
+            st.caption("No results yet.")
+        else:
+            for cid, block in results.items():
+                st.subheader(f"{cid}")
+                scalars, arrays = [], []
+                for name, val in (block or {}).items():
+                    if val is None or not isinstance(val, dict) or "columns" not in val or "rows" not in val:
+                        label = label_map.get(cid, {}).get(name, name)
+                        scalars.append({"Metric": label, "Value": val})
+                    else:
+                        arrays.append((name, val))
+
+                if scalars:
+                    df = pd.DataFrame(scalars)
+                    df["Value"] = df["Value"].map(format_number)
+                    st.dataframe(df, use_container_width=True)
+
+                for name, v in arrays:
+                    header = label_map.get(cid, {}).get(name, v.get("label") or name)
+                    with st.expander(header, expanded=False):
+                        df = pd.DataFrame(v["rows"], columns=v["columns"])
+                        df = df.applymap(format_number)
+                        st.dataframe(df, use_container_width=True))
 
 if __name__ == "__main__":
     main()
