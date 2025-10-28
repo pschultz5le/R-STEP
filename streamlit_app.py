@@ -12,6 +12,14 @@ API_KEY  = st.secrets.get("API_KEY",  os.environ.get("API_KEY",  ""))  # optiona
 HEADERS  = {"Content-Type": "application/json", **({"X-API-Key": API_KEY} if API_KEY else {})}
 # --------------------------------------------
 
+def logo_img_tag(width=220) -> str:
+    logo_path = Path(__file__).parent / "assets" / "5lakes_logo.jpg"
+    if logo_path.exists():
+        b64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
+        return f"<img src='data:image/jpeg;base64,{b64}' alt='5 Lakes Energy Logo' style='width:{width}px; border-radius:5px;'>"
+    # fallback placeholder
+    return f"<div style='width:{width}px;height:{int(width*0.45)}px;background:#eee;color:#666;display:flex;align-items:center;justify-content:center;border-radius:5px;'>Logo</div>"
+
 def apply_custom_style():
     st.markdown("""
     <style>
@@ -137,13 +145,18 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
     return mapping
 
 def main():
-    logo_path = Path("assets/5lakes_logo.jpg")
-    cols_top = st.columns([1, 3])
-    with cols_top[0]:
-        if logo_path.exists():
-            st.image(str(logo_path), width=220)
-    with cols_top[1]:
-        st.title("R-STEP Calculator")
+    st.markdown(
+        f"""
+        <div style='display:flex; align-items:center; gap:20px; margin-bottom:1rem;'>
+            {logo_img_tag(220)}
+            <div>
+                <h1 style='margin:0; color:#0073C2;'>R-STEP Calculator</h1>
+                <p style='margin:0; color:#3CB043; font-weight:500;'>Reliable Energy Siting through Technical Engagement and Planning</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     try:
         schema = load_schema()
