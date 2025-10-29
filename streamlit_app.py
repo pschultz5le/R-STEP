@@ -275,7 +275,7 @@ def main():
 
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
-                    df = pd.DataFrame(v["rows"], columns=v["columns"])
+                    df = pd.DataFrame(v["rows"], columns=v["columns"])                
                 
                     # raw numeric CSV (don’t format with commas in CSV)
                     csv_bytes = df.to_csv(index=False).encode("utf-8")
@@ -289,6 +289,16 @@ def main():
                         mime="text/csv",
                         use_container_width=True,
                         key=f"dl:{cid}:{name}"
+                    preview = st.checkbox("Preview annualized data")
+                    if preview:
+                        with st.expander(header, expanded=False):
+                            if 6 < v["rows"]:
+                                lesser_value = 6
+                            else:
+                                lesser_value=v["rows]
+                            df = pd.DataFrame(lesser_value, columns=v["columns"])
+                            df = df.applymap(format_number)
+                            st.dataframe(df, use_container_width=True)
                     )
 
 if __name__ == "__main__":
