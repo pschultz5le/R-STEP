@@ -295,10 +295,10 @@ def main():
                     if preview:
                         with st.expander(header, expanded=False):
                             max_rows = 6
-                            num_rows = min(v["rows"], max_rows)
-                            df = pd.DataFrame(v["rows"], columns=v["columns"]).head(num_rows)
-                            df = df.applymap(format_number)
-                            st.dataframe(df, use_container_width=True)
+                            df = pd.DataFrame(v["rows"], columns=v["columns"])
+                            num_rows = min(len(df), max_rows)
+                            df_preview = df.head(num_rows).applymap(format_number)
+                            st.dataframe(df_preview, use_container_width=True)
 
 if __name__ == "__main__":
     main()
