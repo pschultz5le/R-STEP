@@ -246,6 +246,21 @@ def main():
     global_names = {r["Name"] for r in globals_rows}
     label_map = build_label_map(schema)
 
+    # Build county -> [township] map from schema.lists
+    ct_pairs = (schema.get("lists", {}) or {}).get("countyTownships", []) or []
+    county_to_townships = {}
+    for p in ct_pairs:
+        c = str(p.get("county", "")).strip()
+        t = str(p.get("township", "")).strip()
+        if c and t:
+            county_to_townships.setdefault(c, []).append(t)
+    
+    # Sort for nice UI
+    for k in county_to_townships:
+        county_to_townships[k] = sorted(set(county_to_townships[k]))
+    all_counties = sorted(county_to_townships.keys())
+
+
     with st.sidebar:
         st.subheader("Module")
         all_ids = [c["id"] for c in calculators]
@@ -261,16 +276,65 @@ def main():
         st.caption("Auth: X-API-Key enabled" if API_KEY else "No API key set (public).")
 
     # --- two-column layout
-    left, right = st.columns([6, 6])  # tweak ratios to taste
+    left, right = st.columns([6, 6])
 
     with left:
         # Globals
         st.header("Global Inputs")
         gcols = st.columns(2)
         globals_vals: Dict[str, Any] = {}
+
+        # We’ll render county/township specially; everything else via render_field
+        # Pull current session values (if any) to keep continuity
+        current_county = st.session_state.get("global:county", "")
+        current_township = st.session_state.get("global:township", "")
+
         for i, row in enumerate(globals_rows):
+            name = row.get("Name")
             with gcols[i % 2]:
-                globals_vals[row["Name"]] = render_field(row, key_prefix="global", current_value=None)
+                if name == "county":
+                    # County select with a leading blank option
+                    options = ["— select —"] + all_counties
+                    try:
+                        idx = options.index(current_county) if current_county in options else 0
+                    except Exception:
+                        idx = 0
+                    sel = st.selectbox(
+                        (row.get("Description") or "county"),
+                        options=options,
+                        index=idx,
+                        key="global:county",
+                        help=_get_help(row),
+                    )
+                    # Normalize blank choice to "" in globals
+                    globals_vals["county"] = "" if sel == "— select —" else sel
+
+                    # If county changed and current township no longer valid, clear it
+                    if globals_vals["county"] and current_township and current_township not in county_to_townships.get(globals_vals["county"], []):
+                        st.session_state["global:township"] = ""
+                        current_township = ""
+
+                elif name == "township":
+                    # Township options depend on selected county
+                    c = st.session_state.get("global:county", "")
+                    t_options = county_to_townships.get(c, []) if c else []
+                    options = ["— select —"] + t_options
+                    try:
+                        idx = options.index(current_township) if current_township in options else 0
+                    except Exception:
+                        idx = 0
+                    sel = st.selectbox(
+                        (row.get("Description") or "township"),
+                        options=options,
+                        index=idx,
+                        key="global:township",
+                        help=_get_help(row),
+                    )
+                    globals_vals["township"] = "" if sel == "— select —" else sel
+
+                else:
+                    # All other globals use your existing generic renderer
+                    globals_vals[name] = render_field(row, key_prefix="global", current_value=None)
 
         # Per-calculator inputs (hiding duplicates of globals)
         for c in calculators:
