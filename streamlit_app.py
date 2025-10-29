@@ -294,11 +294,9 @@ def main():
                     preview = st.checkbox("Preview annualized data")
                     if preview:
                         with st.expander(header, expanded=False):
-                            if 6 < v["rows"]:
-                                lesser_value = 6
-                            else:
-                                lesser_value=v["rows"]
-                            df = pd.DataFrame(lesser_value, columns=v["columns"])
+                            max_rows = 6
+                            num_rows = min(v["rows"], max_rows)
+                            df = pd.DataFrame(v["rows"], columns=v["columns"]).head(num_rows)
                             df = df.applymap(format_number)
                             st.dataframe(df, use_container_width=True)
 
