@@ -293,7 +293,7 @@ def main():
                     #preview annualized results
                     preview = st.checkbox("Preview annualized data")
                     if preview:
-                        with st.expander(header, expanded=False):
+                        with st.expander(header, expanded=True):
                             max_rows = 6
                             df = pd.DataFrame(v["rows"], columns=v["columns"])
                             num_rows = min(len(df), max_rows)
