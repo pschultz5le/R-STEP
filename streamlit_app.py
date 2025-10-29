@@ -217,7 +217,15 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
             by_name[nm] = lbl
         mapping[c["id"]] = by_name
     return mapping
-
+def _extract_scalar_value(v):
+    """Return a plain number/string from Excel-engine dicts."""
+    if isinstance(v, dict):
+        # handle {"Value": ...} or {"value": ...}
+        for k in ("Value", "value", "val", "Val"):
+            if k in v:
+                return v[k]
+    return v
+    
 def main():
     st.markdown(
         f"""
@@ -421,9 +429,12 @@ def main():
                 st.subheader(f"{cid}")
                 scalars, arrays = [], []
                 for name, val in (block or {}).items():
-                    if val is None or not isinstance(val, dict) or "columns" not in val or "rows" not in val:
+                    # extract the scalar value if wrapped in dict
+                    v_scalar = _extract_scalar_value(val)
+                
+                    if isinstance(v_scalar, (int, float, str)) or v_scalar is None:
                         label = label_map.get(cid, {}).get(name, name)
-                        scalars.append({"Metric": label, "Value": val})
+                        scalars.append({"Metric": label, "Value": v_scalar})
                     else:
                         arrays.append((name, val))
 
