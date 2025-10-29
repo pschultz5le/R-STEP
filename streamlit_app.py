@@ -288,7 +288,9 @@ def main():
                         file_name=f"{cid}_{name}.csv",
                         mime="text/csv",
                         use_container_width=True,
-                        key=f"dl:{cid}:{name}"
+                        key=f"dl:{cid}:{name}")
+
+                    #preview annualized results
                     preview = st.checkbox("Preview annualized data")
                     if preview:
                         with st.expander(header, expanded=False):
