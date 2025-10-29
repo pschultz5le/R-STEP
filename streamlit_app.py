@@ -13,6 +13,35 @@ API_KEY  = st.secrets.get("API_KEY",  os.environ.get("API_KEY",  ""))  # optiona
 HEADERS  = {"Content-Type": "application/json", **({"X-API-Key": API_KEY} if API_KEY else {})}
 # --------------------------------------------
 
+# Globals populated from schema["lists"]["countyTownships"]
+COUNTY_OPTIONS: List[str] = []
+TOWNSHIPS_BY_COUNTY: Dict[str, List[str]] = {}
+
+def _init_county_lists_from_schema(schema: Dict[str, Any]) -> None:
+    """Build COUNTY_OPTIONS and TOWNSHIPS_BY_COUNTY from schema['lists']['countyTownships']."""
+    global COUNTY_OPTIONS, TOWNSHIPS_BY_COUNTY
+    COUNTY_OPTIONS = []
+    TOWNSHIPS_BY_COUNTY = {}
+
+    lists = schema.get("lists") or {}
+    pairs = lists.get("countyTownships") or []
+    if not isinstance(pairs, list):
+        return
+
+    # Build sets, then sort for stable UI
+    counties_set = set()
+    mapping = {}
+    for r in pairs:
+        c = str((r.get("county") or "")).strip()
+        t = str((r.get("township") or "")).strip()
+        if not c or not t:
+            continue
+        counties_set.add(c)
+        mapping.setdefault(c, set()).add(t)
+
+    COUNTY_OPTIONS = sorted(counties_set)
+    TOWNSHIPS_BY_COUNTY = {c: sorted(ts) for c, ts in mapping.items()}
+
 def logo_img_tag(width=220) -> str:
     logo_path = Path(__file__).parent / "assets" / "5lakes_logo.jpg"
     if logo_path.exists():
@@ -83,8 +112,21 @@ def _get_help(row):
         raw = raw.strip()
     return raw or None
 
+def _selectbox_with_placeholder(label: str, options: List[str], key: str, helptext: str | None, current_value: Any):
+    """
+    Utility: add '— select —' placeholder and compute index from current_value.
+    current_value may be None or not in options, which yields index 0.
+    """
+    opts = ["— select —"] + options
+    cur = "" if current_value is None else str(current_value)
+    try:
+        idx = opts.index(cur)
+    except ValueError:
+        idx = 0
+    return st.selectbox(label, options=opts, index=idx, key=key, help=helptext)
+
 def render_field(row, key_prefix: str, current_value):
-    """Show Description as label, but use Name as key"""
+    """Show Description as label, but use Name as key."""
     t = (row.get("Type") or "string").lower()
     name_key = row["Name"]
     label_text = (row.get("Description") or name_key).strip()
@@ -92,7 +134,37 @@ def render_field(row, key_prefix: str, current_value):
     helptext = _get_help(row)
     ev = row.get("EnumValues")
 
-    # dropdown
+    # ---- SPECIAL CASES: county/township (use schema lists, ignore EnumValues) ----
+    if name_key == "county" and COUNTY_OPTIONS:
+        # county select (no default)
+        return _selectbox_with_placeholder(
+            label=label,
+            options=COUNTY_OPTIONS,
+            key=f"{key_prefix}:{name_key}",
+            helptext=helptext,
+            current_value=st.session_state.get(f"{key_prefix}:{name_key}")
+        )
+
+    if name_key == "township" and TOWNSHIPS_BY_COUNTY:
+        # townships filtered by the currently selected county (global scope)
+        selected_county = st.session_state.get("global:county")
+        towns = TOWNSHIPS_BY_COUNTY.get(selected_county, [])
+        # If current township is invalid for this county, clear it
+        cur_key = f"{key_prefix}:{name_key}"
+        cur_val = st.session_state.get(cur_key)
+        if cur_val and str(cur_val) not in towns:
+            st.session_state[cur_key] = ""
+            cur_val = ""
+        return _selectbox_with_placeholder(
+            label=label,
+            options=towns,
+            key=cur_key,
+            helptext=helptext,
+            current_value=cur_val
+        )
+
+    # ---- DEFAULT CASES (existing behavior) ----
+    # dropdown (generic EnumValues)
     if isinstance(ev, list) and len(ev) > 0:
         options = _stringify_options(ev)
         cur = "" if current_value is None else str(current_value)
@@ -119,6 +191,7 @@ def render_field(row, key_prefix: str, current_value):
             key=f"{key_prefix}:{name_key}", help=helptext,
         )
 
+    # strings
     val = "" if current_value is None else str(current_value)
     return st.text_input(label, value=val, key=f"{key_prefix}:{name_key}", help=helptext)
 
@@ -164,6 +237,9 @@ def main():
     except Exception as e:
         st.error(f"Failed to load schema from {API_BASE}: {e}")
         st.stop()
+
+    # Initialize county/township lists from schema
+    _init_county_lists_from_schema(schema)
 
     calculators: List[Dict[str, Any]] = schema.get("calculators", [])
     globals_rows: List[Dict[str, Any]] = schema.get("globals", {}).get("inputs", [])
@@ -276,10 +352,8 @@ def main():
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
                     df = pd.DataFrame(v["rows"], columns=v["columns"])
-                
                     # CSV (raw numeric, no formatting)
                     csv_bytes = df.to_csv(index=False).encode("utf-8")
-                
                     st.caption(header)
                     st.download_button(
                         label="Download annualized data (CSV)",
@@ -289,7 +363,6 @@ def main():
                         use_container_width=True,
                         key=f"dl:{cid}:{name}",
                     )
-                
                     # Per-table preview toggle
                     preview_key = f"pv:{cid}:{name}"
                     if st.checkbox("Preview annualized data", key=preview_key):
@@ -297,7 +370,6 @@ def main():
                             max_rows = 6
                             df_preview = df.head(max_rows).applymap(format_number)
                             st.dataframe(df_preview, use_container_width=True)
-
 
 if __name__ == "__main__":
     main()
