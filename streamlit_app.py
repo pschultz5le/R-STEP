@@ -295,7 +295,7 @@ def main():
                             if 6 < v["rows"]:
                                 lesser_value = 6
                             else:
-                                lesser_value=v["rows]
+                                lesser_value=v["rows"]
                             df = pd.DataFrame(lesser_value, columns=v["columns"])
                             df = df.applymap(format_number)
                             st.dataframe(df, use_container_width=True)
