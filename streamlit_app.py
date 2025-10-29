@@ -275,12 +275,11 @@ def main():
 
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
-                    df = pd.DataFrame(v["rows"], columns=v["columns"])                
+                    df = pd.DataFrame(v["rows"], columns=v["columns"])
                 
-                    # raw numeric CSV (don’t format with commas in CSV)
+                    # CSV (raw numeric, no formatting)
                     csv_bytes = df.to_csv(index=False).encode("utf-8")
                 
-                    # Show a little caption and a download button
                     st.caption(header)
                     st.download_button(
                         label="Download annualized data (CSV)",
@@ -288,17 +287,17 @@ def main():
                         file_name=f"{cid}_{name}.csv",
                         mime="text/csv",
                         use_container_width=True,
-                        key=f"dl:{cid}:{name}")
-
-                    #preview annualized results
-                    preview = st.checkbox("Preview annualized data")
-                    if preview:
-                        with st.expander(header, expanded=True):
+                        key=f"dl:{cid}:{name}",
+                    )
+                
+                    # Per-table preview toggle
+                    preview_key = f"pv:{cid}:{name}"
+                    if st.checkbox("Preview annualized data", key=preview_key):
+                        with st.expander(f"{header} — preview", expanded=True):
                             max_rows = 6
-                            df = pd.DataFrame(v["rows"], columns=v["columns"])
-                            num_rows = min(len(df), max_rows)
-                            df_preview = df.head(num_rows).applymap(format_number)
+                            df_preview = df.head(max_rows).applymap(format_number)
                             st.dataframe(df_preview, use_container_width=True)
+
 
 if __name__ == "__main__":
     main()
