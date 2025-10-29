@@ -275,10 +275,21 @@ def main():
 
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
-                    with st.expander(header, expanded=False):
-                        df = pd.DataFrame(v["rows"], columns=v["columns"])
-                        df = df.applymap(format_number)
-                        st.dataframe(df, use_container_width=True)
+                    df = pd.DataFrame(v["rows"], columns=v["columns"])
+                
+                    # raw numeric CSV (don’t format with commas in CSV)
+                    csv_bytes = df.to_csv(index=False).encode("utf-8")
+                
+                    # Show a little caption and a download button
+                    st.caption(header)
+                    st.download_button(
+                        label="Download annualized data (CSV)",
+                        data=csv_bytes,
+                        file_name=f"{cid}_{name}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key=f"dl:{cid}:{name}"
+                    )
 
 if __name__ == "__main__":
     main()
