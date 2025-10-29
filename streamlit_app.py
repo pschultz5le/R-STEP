@@ -301,7 +301,6 @@ def main():
                             df = pd.DataFrame(lesser_value, columns=v["columns"])
                             df = df.applymap(format_number)
                             st.dataframe(df, use_container_width=True)
-                    )
 
 if __name__ == "__main__":
     main()
