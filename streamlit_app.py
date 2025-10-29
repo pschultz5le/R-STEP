@@ -238,6 +238,12 @@ def main():
         st.error(f"Failed to load schema from {API_BASE}: {e}")
         st.stop()
 
+    lists_debug = schema.get("lists", {}) or {}
+    ct_pairs = lists_debug.get("countyTownships", []) or []
+    st.caption(
+        f"County/township pairs loaded: {len(ct_pairs)} • API: {API_BASE}"
+    )
+
     # Initialize county/township lists from schema
     _init_county_lists_from_schema(schema)
 
