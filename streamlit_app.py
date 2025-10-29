@@ -416,6 +416,7 @@ def main():
         if not results:
             st.caption("No results yet.")
         else:
+            st.write("DEBUG setback keys:", list(results.get("Setback", {}).keys()))
             for cid, block in results.items():
                 st.subheader(f"{cid}")
                 scalars, arrays = [], []
