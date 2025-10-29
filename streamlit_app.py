@@ -238,12 +238,6 @@ def main():
         st.error(f"Failed to load schema from {API_BASE}: {e}")
         st.stop()
 
-    lists_debug = schema.get("lists", {}) or {}
-    ct_pairs = lists_debug.get("countyTownships", []) or []
-    st.caption(
-        f"County/township pairs loaded: {len(ct_pairs)} • API: {API_BASE}"
-    )
-
     # Initialize county/township lists from schema
     _init_county_lists_from_schema(schema)
 
@@ -324,16 +318,34 @@ def main():
                     # Township options depend on selected county
                     c = st.session_state.get("global:county", "")
                     t_options = county_to_townships.get(c, []) if c else []
+                
+                    # Fallback to EnumValues if mapping is empty (optional; keep if you used this before)
+                    if not t_options:
+                        for r_ in globals_rows:
+                            if r_.get("Name") == "township" and isinstance(r_.get("EnumValues"), list):
+                                t_options = sorted(str(x).strip() for x in r_["EnumValues"] if str(x).strip())
+                                break
+                
                     options = ["— select —"] + t_options
+                
+                    # IMPORTANT: sanitize session state BEFORE rendering the selectbox
+                    cur_key = "global:township"
+                    cur_val = st.session_state.get(cur_key, "")
+                    if cur_val not in options:
+                        # if the old value is invalid for the current county, clear it
+                        st.session_state[cur_key] = "— select —"
+                        cur_val = "— select —"
+                
                     try:
-                        idx = options.index(current_township) if current_township in options else 0
-                    except Exception:
+                        idx = options.index(cur_val)
+                    except ValueError:
                         idx = 0
+                
                     sel = st.selectbox(
                         (row.get("Description") or "township"),
                         options=options,
                         index=idx,
-                        key="global:township",
+                        key=cur_key,
                         help=_get_help(row),
                     )
                     globals_vals["township"] = "" if sel == "— select —" else sel
