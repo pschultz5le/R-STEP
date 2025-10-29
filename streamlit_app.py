@@ -245,6 +245,7 @@ def main():
     globals_rows: List[Dict[str, Any]] = schema.get("globals", {}).get("inputs", [])
     global_names = {r["Name"] for r in globals_rows}
     label_map = build_label_map(schema)
+    st.write("DEBUG — label_map['Setback']:", label_map.get("Setback", {}))
 
     # Build county -> [township] map from schema.lists
     ct_pairs = (schema.get("lists", {}) or {}).get("countyTownships", []) or []
@@ -416,7 +417,6 @@ def main():
         if not results:
             st.caption("No results yet.")
         else:
-            st.write("DEBUG setback keys:", list(results.get("Setback", {}).keys()))
             for cid, block in results.items():
                 st.subheader(f"{cid}")
                 scalars, arrays = [], []
