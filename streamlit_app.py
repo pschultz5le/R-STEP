@@ -534,7 +534,7 @@ def main():
 
                 # carve out for ranged values
                 ALWAYS_SHOW = {
-                    "DecommissioningMW": {"inputs", "outputs"}  # show full tables for these
+                    "DecommissioningOnlyMW": {"inputs", "outputs"}  # show full tables for these
                 }
                 
                 for name, v in arrays:
