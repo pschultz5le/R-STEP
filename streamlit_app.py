@@ -157,11 +157,6 @@ def apply_custom_style():
       overflow: visible !important;        /* no clipping */
       text-overflow: clip !important;      /* remove ellipsis */
     }
-    
-    /* Optional: let chips wrap to the next line cleanly */
-    section[data-testid="stSidebar"] [data-baseweb="tag"] {
-      display: inline-flex !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
