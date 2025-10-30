@@ -147,6 +147,21 @@ def apply_custom_style():
     .stDataFrame table { border: 1px solid #0073C2; }
     section[data-testid="stSidebar"] { background-color: #F2FAF2; }
     hr { border: 1px solid #0073C2; }
+    /* Show full text on multiselect chips in the sidebar */
+    section[data-testid="stSidebar"] [data-baseweb="tag"] {
+      max-width: none !important;
+    }
+    
+    section[data-testid="stSidebar"] [data-baseweb="tag"] span {
+      white-space: normal !important;      /* allow wrapping */
+      overflow: visible !important;        /* no clipping */
+      text-overflow: clip !important;      /* remove ellipsis */
+    }
+    
+    /* Optional: let chips wrap to the next line cleanly */
+    section[data-testid="stSidebar"] [data-baseweb="tag"] {
+      display: inline-flex !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
