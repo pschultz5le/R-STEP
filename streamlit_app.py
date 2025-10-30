@@ -530,20 +530,8 @@ def main():
                         continue
                 
                     if cid in ALWAYS_SHOW and (not ALWAYS_SHOW[cid] or name in ALWAYS_SHOW[cid]):
-                        # Always display full table for DecomRange arrays
                         st.caption(header)
                         st.dataframe(df.applymap(format_number), use_container_width=True)
-                
-                        # Still offer CSV download
-                        csv_bytes = df.to_csv(index=False).encode("utf-8")
-                        st.download_button(
-                            label="Download (CSV)",
-                            data=csv_bytes,
-                            file_name=f"{cid}_{name}.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key=f"dl:{cid}:{name}",
-                        )
                     else:
                         # CSV (raw numeric, no formatting)
                         csv_bytes = df.to_csv(index=False).encode("utf-8")
