@@ -96,18 +96,23 @@ def _as_array_df(val: Any):
     return None, None
 
 def _display_name(cid: str, schema: Dict[str, Any]) -> str:
-    """
-    Pretty label for a calculator id. If schema carries a Title/Label, use it.
-    Otherwise, humanize the id (split CamelCase / underscores).
-    """
     calc = next((c for c in (schema.get("calculators") or []) if c.get("id") == cid), {})
     for k in ("title", "Title", "label", "Label", "display", "Display"):
         if calc.get(k):
             return str(calc[k]).strip()
-    # humanize: "DecommissioningMW" -> "Decommissioning MW"; "foo_bar" -> "Foo bar"
     name = cid.replace("_", " ")
-    name = re.sub(r"(?<!^)(?=[A-Z])", " ", name).strip()
-    return name[:1].upper() + name[1:]
+    parts = []
+    buf = ""
+    for i, ch in enumerate(name):
+        if i > 0 and ch.isupper() and not (buf and buf[-1].isupper()):
+            parts.append(buf)
+            buf = ch
+        else:
+            buf += ch
+    if buf:
+        parts.append(buf)
+    pretty = " ".join(parts)
+    return pretty[:1].upper() + pretty[1:]
 
 def logo_img_tag(width=220) -> str:
     logo_path = Path(__file__).parent / "assets" / "5lakes_logo.jpg"
