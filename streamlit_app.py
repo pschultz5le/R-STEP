@@ -442,27 +442,49 @@ def main():
                     df["Value"] = df["Value"].map(format_number)
                     st.dataframe(df, use_container_width=True)
 
+                # carve out for ranged values
+                ALWAYS_SHOW = {
+                    "DecommissioningMW": {"inputs", "outputs"}  # show full tables for these
+                }
+                
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
                     df = pd.DataFrame(v["rows"], columns=v["columns"])
-                    # CSV (raw numeric, no formatting)
-                    csv_bytes = df.to_csv(index=False).encode("utf-8")
-                    st.caption(header)
-                    st.download_button(
-                        label="Download annualized data (CSV)",
-                        data=csv_bytes,
-                        file_name=f"{cid}_{name}.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key=f"dl:{cid}:{name}",
-                    )
-                    # Per-table preview toggle
-                    preview_key = f"pv:{cid}:{name}"
-                    if st.checkbox("Preview annualized data", key=preview_key):
-                        with st.expander(f"{header} — preview", expanded=True):
-                            max_rows = 6
-                            df_preview = df.head(max_rows).applymap(format_number)
-                            st.dataframe(df_preview, use_container_width=True)
+                
+                    if cid in ALWAYS_SHOW and (not ALWAYS_SHOW[cid] or name in ALWAYS_SHOW[cid]):
+                        # Always display full table for DecomRange arrays
+                        st.caption(header)
+                        st.dataframe(df.applymap(format_number), use_container_width=True)
+                
+                        # Still offer CSV download
+                        csv_bytes = df.to_csv(index=False).encode("utf-8")
+                        st.download_button(
+                            label="Download (CSV)",
+                            data=csv_bytes,
+                            file_name=f"{cid}_{name}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key=f"dl:{cid}:{name}",
+                        )
+                    else:
+                        # CSV (raw numeric, no formatting)
+                        csv_bytes = df.to_csv(index=False).encode("utf-8")
+                        st.caption(header)
+                        st.download_button(
+                            label="Download annualized data (CSV)",
+                            data=csv_bytes,
+                            file_name=f"{cid}_{name}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key=f"dl:{cid}:{name}",
+                        )
+                        # Per-table preview toggle
+                        preview_key = f"pv:{cid}:{name}"
+                        if st.checkbox("Preview annualized data", key=preview_key):
+                            with st.expander(f"{header} — preview", expanded=True):
+                                max_rows = 6
+                                df_preview = df.head(max_rows).applymap(format_number)
+                                st.dataframe(df_preview, use_container_width=True)
 
 if __name__ == "__main__":
     main()
