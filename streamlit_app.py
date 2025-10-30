@@ -6,6 +6,7 @@ import requests
 import pandas as pd
 import streamlit as st
 import base64
+import re
 
 # ------------------ CONFIG ------------------
 API_BASE = st.secrets.get("API_BASE", os.environ.get("API_BASE", "http://127.0.0.1:8000"))
@@ -41,6 +42,72 @@ def _init_county_lists_from_schema(schema: Dict[str, Any]) -> None:
 
     COUNTY_OPTIONS = sorted(counties_set)
     TOWNSHIPS_BY_COUNTY = {c: sorted(ts) for c, ts in mapping.items()}
+
+def _is_array_like(val: Any) -> bool:
+    """Detect common array/table shapes returned by the engine."""
+    if isinstance(val, dict):
+        if (("rows" in val and "columns" in val) or
+            ("Rows" in val and "Columns" in val) or
+            ("data" in val and ("columns" in val or "Cols" in val))):
+            return True
+    # list of dicts -> also treat as a table
+    if isinstance(val, list) and val and isinstance(val[0], dict):
+        return True
+    return False
+
+def _as_array_df(val: Any):
+    """
+    Normalize an array-like block into a pandas DataFrame.
+    Returns (df, header_cols) where header_cols is the column list used (or None).
+    """
+    if val is None:
+        return None, None
+
+    if isinstance(val, dict):
+        rows = (val.get("rows") or val.get("Rows") or
+                val.get("data") or val.get("Data"))
+        cols = (val.get("columns") or val.get("Columns") or
+                val.get("cols") or val.get("Cols"))
+
+        if rows is not None and cols is not None:
+            try:
+                return pd.DataFrame(rows, columns=cols), list(cols)
+            except Exception:
+                # Fallback: try to coerce whatever we have
+                try:
+                    return pd.DataFrame(rows), None
+                except Exception:
+                    return None, None
+
+        # list of dicts in 'data'
+        if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+            try:
+                return pd.DataFrame(rows), None
+            except Exception:
+                return None, None
+
+    # list-of-dicts directly
+    if isinstance(val, list) and val and isinstance(val[0], dict):
+        try:
+            return pd.DataFrame(val), None
+        except Exception:
+            return None, None
+
+    return None, None
+
+def _display_name(cid: str, schema: Dict[str, Any]) -> str:
+    """
+    Pretty label for a calculator id. If schema carries a Title/Label, use it.
+    Otherwise, humanize the id (split CamelCase / underscores).
+    """
+    calc = next((c for c in (schema.get("calculators") or []) if c.get("id") == cid), {})
+    for k in ("title", "Title", "label", "Label", "display", "Display"):
+        if calc.get(k):
+            return str(calc[k]).strip()
+    # humanize: "DecommissioningMW" -> "Decommissioning MW"; "foo_bar" -> "Foo bar"
+    name = cid.replace("_", " ")
+    name = re.sub(r"(?<!^)(?=[A-Z])", " ", name).strip()
+    return name[:1].upper() + name[1:]
 
 def logo_img_tag(width=220) -> str:
     logo_path = Path(__file__).parent / "assets" / "5lakes_logo.jpg"
@@ -272,7 +339,12 @@ def main():
     with st.sidebar:
         st.subheader("Module")
         all_ids = [c["id"] for c in calculators]
-        selected = st.multiselect("Select module(s)", options=all_ids, default=all_ids)
+        selected = st.multiselect(
+            "Select module(s)",
+            options=all_ids,
+            default=all_ids,
+            format_func=lambda cid: _display_name(cid, schema)
+        )
         st.divider()
         st.subheader("Instructions")
         st.write("Select which modules you'd like to use in the dropdown above.")
@@ -366,7 +438,7 @@ def main():
         for c in calculators:
             if c["id"] not in selected:
                 continue
-            st.subheader(f"{c['id']} — Inputs")
+            st.subheader(f"{_display_name(c['id'], schema)} — Inputs")
             rows = [r for r in (c.get("inputs") or []) if r["Name"] not in global_names]
             if not rows:
                 st.caption("No inputs for this calculator.")
@@ -425,18 +497,16 @@ def main():
             st.caption("No results yet.")
         else:
             for cid, block in results.items():
-                st.subheader(f"{cid}")
+                st.subheader(_display_name(cid,schema))
                 scalars, arrays = [], []
                 for name, val in (block or {}).items():
-                    # extract the scalar value if wrapped in dict
-                    v_scalar = _extract_scalar_value(val)
-                
-                    if isinstance(v_scalar, (int, float, str)) or v_scalar is None:
+                    if _is_array_like(val):
+                        arrays.append((name, val))
+                    else:
+                        v_scalar = _extract_scalar_value(val)
                         label = label_map.get(cid, {}).get(name, name)
                         scalars.append({"Metric": label, "Value": v_scalar})
-                    else:
-                        arrays.append((name, val))
-
+                
                 if scalars:
                     df = pd.DataFrame(scalars)
                     df["Value"] = df["Value"].map(format_number)
@@ -449,7 +519,10 @@ def main():
                 
                 for name, v in arrays:
                     header = label_map.get(cid, {}).get(name, v.get("label") or name)
-                    df = pd.DataFrame(v["rows"], columns=v["columns"])
+                    df, _ = _as_array_df(v)
+                    if df is None:
+                        st.warning(f"{header}: table not available.")
+                        continue
                 
                     if cid in ALWAYS_SHOW and (not ALWAYS_SHOW[cid] or name in ALWAYS_SHOW[cid]):
                         # Always display full table for DecomRange arrays
