@@ -165,9 +165,38 @@ def apply_custom_style():
 
     section[data-testid="stSidebar"] [data-baseweb="tag"] span {
       white-space: nowrap !important;     /* keep the label on one line */
-      overflow: visible !important;       /* no clipping */
+      overflow: hidden !important;       /* no clipping */
       text-overflow: unset !important;    /* no ellipsis */
     }
+
+    section[data-testid="stSidebar"] [data-baseweb="tag"]{
+      display: inline-flex !important;
+      align-items: center !important;
+      max-width: none !important;     /* remove BaseWeb max width */
+      white-space: nowrap !important; /* never wrap inside a chip */
+      overflow: visible !important;   /* don't clip tail text like 'MW' */
+      padding-right: 12px !important; /* reserve space so text doesn't touch the 'x' */
+    }
+    
+    section[data-testid="stSidebar"] [data-baseweb="tag"] span{
+      white-space: nowrap !important;
+      overflow: visible !important;
+      text-overflow: unset !important;
+      margin-right: 6px !important; 
+    }
+    
+    section[data-testid="stSidebar"] [data-baseweb="tag"] svg,
+    section[data-testid="stSidebar"] [data-baseweb="tag"] [aria-label="Remove"]{
+      margin-left: 6px !important;
+      flex: 0 0 auto !important;     
+    }
+    
+    section[data-testid="stSidebar"] [data-baseweb="select"] > div{
+      white-space: nowrap !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+
     </style>
     """, unsafe_allow_html=True)
 
