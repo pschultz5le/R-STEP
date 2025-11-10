@@ -151,46 +151,36 @@ def apply_custom_style():
     section[data-testid="stSidebar"] [data-baseweb="tag"] {
       max-width: none !important;
     }
-    
-    section[data-testid="stSidebar"] [data-baseweb="tag"] span {
-      white-space: nowrap !important;      
-      overflow: auto !important;        
-      text-overflow: visible !important;     
-    }
 
-    section[data-testid="stSidebar"] [data-baseweb="tag"] {
-      display: inline-flex !important;
-      max-width: none !important;
-    }
-
-    section[data-testid="stSidebar"] [data-baseweb="tag"] span {
-      white-space: nowrap !important;     /* keep the label on one line */
-      overflow: hidden !important;       /* no clipping */
-      text-overflow: unset !important;    /* no ellipsis */
-    }
-
+    /* Make each chip size to its text, keep it on one line, and add space before the close icon */
     section[data-testid="stSidebar"] [data-baseweb="tag"]{
       display: inline-flex !important;
       align-items: center !important;
-      max-width: none !important;     /* remove BaseWeb max width */
-      white-space: nowrap !important; /* never wrap inside a chip */
-      overflow: visible !important;   /* don't clip tail text like 'MW' */
-      padding-right: 12px !important; /* reserve space so text doesn't touch the 'x' */
+      width: max-content !important;     /* grow to fit full text */
+      max-width: none !important;
+      white-space: nowrap !important;     /* never wrap chip content */
+      overflow: visible !important;       /* don't clip trailing characters */
+      gap: 8px !important;                /* space between label and × */
+      padding: 6px 12px !important;       /* ensure right padding so text never hits × */
     }
     
+    /* Ensure the label never ellipsizes or wraps */
     section[data-testid="stSidebar"] [data-baseweb="tag"] span{
+      display: inline-block !important;
       white-space: nowrap !important;
       overflow: visible !important;
       text-overflow: unset !important;
-      margin-right: 6px !important; 
     }
     
-    section[data-testid="stSidebar"] [data-baseweb="tag"] svg,
-    section[data-testid="stSidebar"] [data-baseweb="tag"] [aria-label="Remove"]{
-      margin-left: 6px !important;
-      flex: 0 0 auto !important;     
+    /* Keep the close icon from overlaying text and give it a tiny margin */
+    section[data-testid="stSidebar"] [data-baseweb="tag"] [aria-label="Remove"],
+    section[data-testid="stSidebar"] [data-baseweb="tag"] svg{
+      position: static !important;        /* avoid absolute overlap */
+      flex: 0 0 auto !important;
+      margin-left: 2px !important;
     }
     
+    /* Keep all chips in one horizontal line with scroll when needed */
     section[data-testid="stSidebar"] [data-baseweb="select"] > div{
       white-space: nowrap !important;
       overflow-x: auto !important;
