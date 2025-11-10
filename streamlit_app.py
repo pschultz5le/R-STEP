@@ -153,9 +153,20 @@ def apply_custom_style():
     }
     
     section[data-testid="stSidebar"] [data-baseweb="tag"] span {
-      white-space: normal !important;      /* allow wrapping */
-      overflow: visible !important;        /* no clipping */
-      text-overflow: clip !important;      /* remove ellipsis */
+      white-space: nowrap !important;      
+      overflow: auto !important;        
+      text-overflow: hidden !important;     
+    }
+
+    section[data-testid="stSidebar"] [data-baseweb="tag"] {
+      display: inline-flex !important;
+      max-width: none !important;
+    }
+
+    section[data-testid="stSidebar"] [data-baseweb="tag"] span {
+      white-space: nowrap !important;     /* keep the label on one line */
+      overflow: visible !important;       /* no clipping */
+      text-overflow: unset !important;    /* no ellipsis */
     }
     </style>
     """, unsafe_allow_html=True)
