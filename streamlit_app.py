@@ -155,7 +155,7 @@ def apply_custom_style():
     section[data-testid="stSidebar"] [data-baseweb="tag"] span {
       white-space: nowrap !important;      
       overflow: auto !important;        
-      text-overflow: hidden !important;     
+      text-overflow: visible !important;     
     }
 
     section[data-testid="stSidebar"] [data-baseweb="tag"] {
