@@ -372,23 +372,17 @@ def _coerce_float(x):
 
 def format_number(x):
     """
-    - 0 < |x| < 1  -> two decimals (e.g., 0.5 -> '0.50', -0.3 -> '-0.30')
-    - |x| >= 1     -> no decimals if integer-like, otherwise 2 decimals
-    - 0 or blank   -> '0' or ''
-    - non-numeric  -> returned as-is
+    - |x| < 1      -> 2 decimals (e.g., 0 -> '0.00', 0.5 -> '0.50', -0.3 -> '-0.30')
+    - |x| >= 1     -> integer if whole, else 2 decimals
+    - blank/non-numeric -> pass through ('' for None/"")
     """
     v = _coerce_float(x)
     if v is None:
-        # keep original strings (like labels) or blank for None/""
         return "" if x in (None, "") else x
 
-    if v == 0:
-        return "0"
-
-    if 0 < abs(v) < 1:
+    if abs(v) < 1:
         return f"{v:,.2f}"
 
-    # >= 1 (or <= -1): if it's effectively an integer, show no decimals
     if abs(v - round(v)) < 1e-9:
         return f"{round(v):,d}"
 
