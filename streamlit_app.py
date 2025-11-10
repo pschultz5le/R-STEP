@@ -356,21 +356,43 @@ def render_field(row, key_prefix: str, current_value):
     val = "" if current_value is None else str(current_value)
     return st.text_input(label, value=val, key=f"{key_prefix}:{name_key}", help=helptext)
 
+def _coerce_float(x):
+    """Return float(x) if x is a number or a numeric-looking string (handles commas)."""
+    if isinstance(x, (int, float)):
+        return float(x)
+    if isinstance(x, str):
+        s = x.strip().replace(",", "")
+        if s == "":
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+    return None
+
 def format_number(x):
-    if x is None or x == "":
-        return ""
-    try:
-        val = float(x)
-        # show two decimals if between -1 and 1 but not exactly 0
-        if -1 < val < 1 and val != 0:
-            return f"{val:,.2f}"
-        # show no decimals for large values
-        elif abs(val) >= 1:
-            return f"{val:,.0f}"
-        else:
-            return "0"
-    except Exception:
-        return x
+    """
+    - 0 < |x| < 1  -> two decimals (e.g., 0.5 -> '0.50', -0.3 -> '-0.30')
+    - |x| >= 1     -> no decimals if integer-like, otherwise 2 decimals
+    - 0 or blank   -> '0' or ''
+    - non-numeric  -> returned as-is
+    """
+    v = _coerce_float(x)
+    if v is None:
+        # keep original strings (like labels) or blank for None/""
+        return "" if x in (None, "") else x
+
+    if v == 0:
+        return "0"
+
+    if 0 < abs(v) < 1:
+        return f"{v:,.2f}"
+
+    # >= 1 (or <= -1): if it's effectively an integer, show no decimals
+    if abs(v - round(v)) < 1e-9:
+        return f"{round(v):,d}"
+
+    return f"{v:,.2f}"
 
 def build_label_map(schema) -> Dict[str, Dict[str, str]]:
     mapping: Dict[str, Dict[str, str]] = {}
