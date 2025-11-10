@@ -186,6 +186,55 @@ def apply_custom_style():
       overflow-x: auto !important;
       overflow-y: hidden !important;
     }
+    /* ===== Multiselect chip: show full label, no overlap with × ===== */
+
+    /* Apply in sidebar... */
+    section[data-testid="stSidebar"] [data-baseweb="tag"],
+    section[data-testid="stSidebar"] [data-baseweb="tag"] * {
+      max-width: none !important;      /* kill BaseWeb’s internal max widths */
+      white-space: nowrap !important;  /* keep entire label on one line */
+      overflow: visible !important;    /* never clip trailing characters like 'W' */
+      text-overflow: clip !important;  /* no ellipsis */
+    }
+    
+    section[data-testid="stSidebar"] [data-baseweb="tag"]{
+      display: inline-flex !important;
+      align-items: center !important;
+      width: max-content !important;   /* size to text */
+      gap: 10px !important;            /* space between label and × */
+      padding: 6px 18px 6px 12px !important; /* extra right pad so × never overlaps */
+    }
+    
+    /* Ensure the close icon doesn’t sit on top of the label */
+    section[data-testid="stSidebar"] [data-baseweb="tag"] [aria-label="Remove"],
+    section[data-testid="stSidebar"] [data-baseweb="tag"] svg{
+      position: relative !important;
+      right: auto !important;
+      margin-left: 2px !important;
+      flex: 0 0 auto !important;
+    }
+    
+    /* Keep chips on one row; allow horizontal scroll if needed */
+    section[data-testid="stSidebar"] [data-baseweb="select"] > div{
+      white-space: nowrap !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+    
+    /* ...and mirror the same rules for chips rendered in the main body */
+    [data-baseweb="tag"], [data-baseweb="tag"] * {
+      max-width: none !important;
+      white-space: nowrap !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+    [data-baseweb="tag"]{
+      display: inline-flex !important;
+      align-items: center !important;
+      width: max-content !important;
+      gap: 10px !important;
+      padding: 6px 18px 6px 12px !important;
+    }
 
     </style>
     """, unsafe_allow_html=True)
