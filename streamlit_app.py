@@ -359,10 +359,16 @@ def render_field(row, key_prefix: str, current_value):
 def format_number(x):
     if x is None or x == "":
         return ""
-    if isinstance(x, (int, float)):
-        return f"{x:,.0f}"
     try:
-        return f"{float(x):,.0f}"
+        val = float(x)
+        # show two decimals if between -1 and 1 but not exactly 0
+        if -1 < val < 1 and val != 0:
+            return f"{val:,.2f}"
+        # show no decimals for large values
+        elif abs(val) >= 1:
+            return f"{val:,.0f}"
+        else:
+            return "0"
     except Exception:
         return x
 
