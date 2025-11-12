@@ -407,39 +407,28 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
     return mapping
 
 def _normalize_default_for_row(row: Dict[str, Any], schema_lists: Dict[str, Any]) -> Any:
-    """
-    Return a session-safe default for a given schema row:
-    - numbers/percentages -> float (or 0.0 if None)
-    - enum -> one of the enum strings (or "")
-    - county/township use "" (let the UI placeholder handle it)
-    - strings -> str(...) or ""
-    """
     t = (row.get("Type") or "string").lower()
     name = row.get("Name")
     ev = row.get("EnumValues")
 
-    # Special lists injected from schema
     if name in ("county", "township"):
-        return ""  # use placeholder / dependent select
+        return "— select —"  # important: matches the selectbox options
 
     if isinstance(ev, list) and len(ev) > 0:
         d = row.get("Default")
         d_str = "" if d in (None, "") else str(d)
-        # pick default if valid, else first enum option
         opts = [str(o) for o in ev]
         return d_str if d_str in opts else (opts[0] if opts else "")
 
     if t in ("number", "percentage"):
         d = row.get("Default")
         try:
-            return float(d) if d is not None and d != "" else 0.0
+            return float(d) if d not in (None, "") else 0.0
         except Exception:
             return 0.0
 
-    # strings
     d = row.get("Default")
     return "" if d in (None, "") else str(d)
-
 
 def _safe_clear_state(prefixes: tuple[str, ...] = ("global:", "calc:", "pv:", "dl:")):
     """Delete any session keys that start with given prefixes."""
@@ -522,68 +511,72 @@ def main():
     left, right = st.columns([6, 6])
 
     with left:
-        # Globals
+        # --- Globals ---
         st.header("Global Inputs")
         gcols = st.columns(2)
         globals_vals: Dict[str, Any] = {}
-
-        # We’ll render county/township specially; everything else via render_field
+        
         # Pull current session values (if any) to keep continuity
-        current_county = st.session_state.get("global:county", "")
-        current_township = st.session_state.get("global:township", "")
-
+        current_county = st.session_state.get("global:county", "— select —")
+        current_township = st.session_state.get("global:township", "— select —")
+        
         for i, row in enumerate(globals_rows):
             name = row.get("Name")
             with gcols[i % 2]:
                 if name == "county":
-                    # County select with a leading blank option
+                    # County select with sanitize-before-render
                     options = ["— select —"] + all_counties
-                    try:
-                        idx = options.index(current_county) if current_county in options else 0
-                    except Exception:
-                        idx = 0
+        
+                    cur_key = "global:county"
+                    cur_val = st.session_state.get(cur_key, "— select —")
+                    if cur_val not in options:
+                        st.session_state[cur_key] = "— select —"
+                        cur_val = "— select —"
+        
+                    idx = options.index(cur_val)
+        
                     sel = st.selectbox(
                         (row.get("Description") or "county"),
                         options=options,
                         index=idx,
-                        key="global:county",
+                        key=cur_key,
                         help=_get_help(row),
                     )
-                    # Normalize blank choice to "" in globals
+        
+                    # Normalize for payload (empty string if placeholder chosen)
                     globals_vals["county"] = "" if sel == "— select —" else sel
-
-                    # If county changed and current township no longer valid, clear it
-                    if globals_vals["county"] and current_township and current_township not in county_to_townships.get(globals_vals["county"], []):
-                        st.session_state["global:township"] = ""
-                        current_township = ""
-
+        
+                    # If county changed and current township no longer valid, push township to placeholder
+                    current_township = st.session_state.get("global:township", "— select —")
+                    if globals_vals["county"]:
+                        valid_towns = county_to_townships.get(globals_vals["county"], [])
+                        if current_township not in (["— select —"] + valid_towns):
+                            st.session_state["global:township"] = "— select —"
+        
                 elif name == "township":
-                    # Township options depend on selected county
-                    c = st.session_state.get("global:county", "")
-                    t_options = county_to_townships.get(c, []) if c else []
-                
-                    # Fallback to EnumValues if mapping is empty (optional; keep if you used this before)
+                    # Township options depend on selected county (after county sanitize)
+                    c = st.session_state.get("global:county", "— select —")
+                    selected_county = "" if c == "— select —" else c
+                    t_options = county_to_townships.get(selected_county, []) if selected_county else []
+        
+                    # Fallback to EnumValues if mapping is empty (optional)
                     if not t_options:
                         for r_ in globals_rows:
                             if r_.get("Name") == "township" and isinstance(r_.get("EnumValues"), list):
                                 t_options = sorted(str(x).strip() for x in r_["EnumValues"] if str(x).strip())
                                 break
-                
+        
                     options = ["— select —"] + t_options
-                
-                    # IMPORTANT: sanitize session state BEFORE rendering the selectbox
+        
+                    # Sanitize township BEFORE rendering
                     cur_key = "global:township"
-                    cur_val = st.session_state.get(cur_key, "")
+                    cur_val = st.session_state.get(cur_key, "— select —")
                     if cur_val not in options:
-                        # if the old value is invalid for the current county, clear it
                         st.session_state[cur_key] = "— select —"
                         cur_val = "— select —"
-                
-                    try:
-                        idx = options.index(cur_val)
-                    except ValueError:
-                        idx = 0
-                
+        
+                    idx = options.index(cur_val)
+        
                     sel = st.selectbox(
                         (row.get("Description") or "township"),
                         options=options,
@@ -592,7 +585,7 @@ def main():
                         help=_get_help(row),
                     )
                     globals_vals["township"] = "" if sel == "— select —" else sel
-
+        
                 else:
                     # All other globals use your existing generic renderer
                     globals_vals[name] = render_field(row, key_prefix="global", current_value=None)
@@ -655,27 +648,31 @@ def main():
             if st.button("Reset to Default Values", key="btn_reset_defaults", use_container_width=True):
                 # 1) Clear any old widget/preview/download keys
                 _safe_clear_state(("global:", "calc:", "pv:", "dl:"))
-        
-                # 2) Re-apply typed defaults for globals
+                
+                # 1b) Seed county/township with the placeholder so selectboxes always serialize
+                st.session_state["global:county"] = "— select —"
+                st.session_state["global:township"] = "— select —"
+                
+                # 2) Re-apply typed defaults for globals (skip county/township here; we just set them)
                 schema_lists = (schema.get("lists") or {})
                 for row in globals_rows:
                     name = row.get("Name")
+                    if name in ("county", "township"):
+                        continue
                     st.session_state[f"global:{name}"] = _normalize_default_for_row(row, schema_lists)
-        
-                # 3) Re-apply typed defaults for each calculator input
+                
+                # 3) Re-apply typed defaults for each calculator input (skipping globals duplicated in modules)
                 for c in calculators:
                     for row in (c.get("inputs") or []):
                         name = row.get("Name")
-                        # skip globals duplicated in modules
                         if name in global_names:
                             continue
                         st.session_state[f"calc:{c['id']}:{name}"] = _normalize_default_for_row(row, schema_lists)
-        
-                # 4) Optional: clear last results so right pane doesn't show stale numbers
+                
                 st.session_state.pop("last_results", None)
-        
                 st.success("All inputs reset to default values.")
                 st.rerun()
+
 
     # --- Results on the right
     with right:
