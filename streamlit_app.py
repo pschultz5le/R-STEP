@@ -565,6 +565,47 @@ def main():
                         val = st.session_state.get(f"calc:{c['id']}:{row['Name']}")
                         _ = render_field(row, key_prefix=f"calc:{c['id']}", current_value=val)
 
+        st.divider()
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            if st.button("Calculate", type="primary", use_container_width=True):
+                try:
+                    r = requests.post(f"{API_BASE}/calculate", headers=HEADERS,
+                                      data=json.dumps(payload), timeout=120)
+                    if not r.ok:
+                        st.error(f"API error {r.status_code}: {r.text}")
+                    else:
+                        data = r.json()
+                        st.session_state["last_results"] = data.get("results", data)
+                except Exception as e:
+                    st.error(f"Request failed: {e}")
+        with c2:
+            with st.expander("Payload Preview", expanded=False):
+                st.code(json.dumps(payload, indent=2))
+        with c3:
+            if st.button("Reset to Default Values", use_container_width=True):
+                # Clear all session inputs (globals + module-specific)
+                for key in list(st.session_state.keys()):
+                    if key.startswith("global:") or key.startswith("calc:"):
+                        del st.session_state[key]
+
+                # Reinitialize county/township (or any prefilled default)
+                for row in globals_rows:
+                    default_val = row.get("Default")
+                    name = row.get("Name")
+                    if default_val is not None:
+                        st.session_state[f"global:{name}"] = default_val
+
+                for c in calculators:
+                    for row in c.get("inputs", []):
+                        default_val = row.get("Default")
+                        name = row.get("Name")
+                        if default_val is not None:
+                            st.session_state[f"calc:{c['id']}:{name}"] = default_val
+
+                st.success("All inputs have been reset to default values. Please click outside the sidebar or rerun if needed.")
+                st.rerun()
+
         # Build payload on the left
         overrides: Dict[str, Dict[str, Any]] = {}
         for c in calculators:
