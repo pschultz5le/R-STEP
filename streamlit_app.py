@@ -588,24 +588,6 @@ def main():
         }
 
         st.divider()
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            if st.button("Calculate", type="primary", use_container_width=True):
-                try:
-                    r = requests.post(f"{API_BASE}/calculate", headers=HEADERS,
-                                      data=json.dumps(payload), timeout=120)
-                    if not r.ok:
-                        st.error(f"API error {r.status_code}: {r.text}")
-                    else:
-                        data = r.json()
-                        st.session_state["last_results"] = data.get("results", data)
-                except Exception as e:
-                    st.error(f"Request failed: {e}")
-        with c2:
-            with st.expander("Payload Preview", expanded=False):
-                st.code(json.dumps(payload, indent=2))
-
-                st.divider()
         c1, c2, c3 = st.columns([1, 1, 1])
         with c1:
             if st.button("Calculate", type="primary", use_container_width=True):
