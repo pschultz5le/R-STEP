@@ -290,10 +290,15 @@ def render_field(row, key_prefix: str, current_value):
     """Show Description as label, but use Name as key."""
     t = (row.get("Type") or "string").lower()
     name_key = row["Name"]
+    widget_key = f"{key_prefix}:{name_key}"
     label_text = (row.get("Description") or name_key).strip()
     label = f"{label_text}{' *' if row.get('Required') else ''}"
     helptext = _get_help(row)
     ev = row.get("EnumValues")
+
+    # If something odd got into the state for this key, clean it up
+    if widget_key in st.session_state and isinstance(st.session_state[widget_key], (dict, list)):
+        del st.session_state[widget_key]
 
     # ---- SPECIAL CASES: county/township (use schema lists, ignore EnumValues) ----
     if name_key == "county" and COUNTY_OPTIONS:
@@ -400,6 +405,48 @@ def build_label_map(schema) -> Dict[str, Dict[str, str]]:
             by_name[nm] = lbl
         mapping[c["id"]] = by_name
     return mapping
+
+def _normalize_default_for_row(row: Dict[str, Any], schema_lists: Dict[str, Any]) -> Any:
+    """
+    Return a session-safe default for a given schema row:
+    - numbers/percentages -> float (or 0.0 if None)
+    - enum -> one of the enum strings (or "")
+    - county/township use "" (let the UI placeholder handle it)
+    - strings -> str(...) or ""
+    """
+    t = (row.get("Type") or "string").lower()
+    name = row.get("Name")
+    ev = row.get("EnumValues")
+
+    # Special lists injected from schema
+    if name in ("county", "township"):
+        return ""  # use placeholder / dependent select
+
+    if isinstance(ev, list) and len(ev) > 0:
+        d = row.get("Default")
+        d_str = "" if d in (None, "") else str(d)
+        # pick default if valid, else first enum option
+        opts = [str(o) for o in ev]
+        return d_str if d_str in opts else (opts[0] if opts else "")
+
+    if t in ("number", "percentage"):
+        d = row.get("Default")
+        try:
+            return float(d) if d is not None and d != "" else 0.0
+        except Exception:
+            return 0.0
+
+    # strings
+    d = row.get("Default")
+    return "" if d in (None, "") else str(d)
+
+
+def _safe_clear_state(prefixes: tuple[str, ...] = ("global:", "calc:", "pv:", "dl:")):
+    """Delete any session keys that start with given prefixes."""
+    for k in list(st.session_state.keys()):
+        if k.startswith(prefixes):
+            del st.session_state[k]
+
 def _extract_scalar_value(v):
     """Return a plain number/string from Excel-engine dicts."""
     if isinstance(v, dict):
@@ -605,27 +652,29 @@ def main():
             with st.expander("Payload Preview", expanded=False):
                 st.code(json.dumps(payload, indent=2))
         with c3:
-            if st.button("Reset to Default Values", use_container_width=True):
-                # Clear all session inputs (globals + module-specific)
-                for key in list(st.session_state.keys()):
-                    if key.startswith("global:") or key.startswith("calc:"):
-                        del st.session_state[key]
-
-                # Reinitialize county/township (or any prefilled default)
+            if st.button("Reset to Default Values", key="btn_reset_defaults", use_container_width=True):
+                # 1) Clear any old widget/preview/download keys
+                _safe_clear_state(("global:", "calc:", "pv:", "dl:"))
+        
+                # 2) Re-apply typed defaults for globals
+                schema_lists = (schema.get("lists") or {})
                 for row in globals_rows:
-                    default_val = row.get("Default")
                     name = row.get("Name")
-                    if default_val is not None:
-                        st.session_state[f"global:{name}"] = default_val
-
+                    st.session_state[f"global:{name}"] = _normalize_default_for_row(row, schema_lists)
+        
+                # 3) Re-apply typed defaults for each calculator input
                 for c in calculators:
-                    for row in c.get("inputs", []):
-                        default_val = row.get("Default")
+                    for row in (c.get("inputs") or []):
                         name = row.get("Name")
-                        if default_val is not None:
-                            st.session_state[f"calc:{c['id']}:{name}"] = default_val
-
-                st.success("All inputs have been reset to default values. Please click outside the sidebar or rerun if needed.")
+                        # skip globals duplicated in modules
+                        if name in global_names:
+                            continue
+                        st.session_state[f"calc:{c['id']}:{name}"] = _normalize_default_for_row(row, schema_lists)
+        
+                # 4) Optional: clear last results so right pane doesn't show stale numbers
+                st.session_state.pop("last_results", None)
+        
+                st.success("All inputs reset to default values.")
                 st.rerun()
 
     # --- Results on the right
